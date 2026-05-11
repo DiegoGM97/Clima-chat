@@ -19,7 +19,7 @@ interface ChatApiResponse {
 
 export function WeatherAIChat({ currentCity }: WeatherAIChatProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       role: "assistant",
       content: `¡Hola! Soy tu IA del clima para ${currentCity}.`,
@@ -28,6 +28,26 @@ export function WeatherAIChat({ currentCity }: WeatherAIChatProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMessages((prev) => {
+      const onlyWelcome =
+        prev.length === 1 &&
+        prev[0].role === "assistant" &&
+        prev[0].content.startsWith("¡Hola! Soy tu IA del clima para ");
+
+      if (onlyWelcome) {
+        return [
+          {
+            role: "assistant",
+            content: `¡Hola! Soy tu IA del clima para ${currentCity}.`,
+          },
+        ];
+      }
+
+      return prev;
+    });
+  }, [currentCity]);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });

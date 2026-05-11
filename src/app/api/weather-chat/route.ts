@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const trimmedMessage = typeof message === "string" ? message.trim() : "";
+    const trimmedMessage = message.trim();
 
     if (!trimmedMessage) {
       return withRateLimitHeaders(

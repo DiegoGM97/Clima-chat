@@ -22,7 +22,6 @@ export interface ChatMessage {
 }
 
 const CHAT_BUCKET = "climate-chat-images";
-const MESSAGE_EVENT = "message";
 const MAX_IMAGE_SIZE_MB = 5;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -61,9 +60,6 @@ export function useRealtimeChat({
 }: UseRealtimeChatProps) {
   const supabase = useMemo(() => createClient(), []);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [channel, setChannel] = useState<ReturnType<
-    typeof supabase.channel
-  > | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectedUsers, setConnectedUsers] = useState<string[]>([]);
@@ -127,6 +123,7 @@ export function useRealtimeChat({
 
     const setupRealtimeRoom = async () => {
       try {
+        setChatError(null);
         const room = await ensureRoom();
         if (!isActive) return;
 
@@ -137,17 +134,6 @@ export function useRealtimeChat({
         activeChannel = newChannel;
 
         newChannel
-          .on("broadcast", { event: MESSAGE_EVENT }, (payload) => {
-            const incoming = payload.payload as ChatMessage;
-
-            setMessages((current) => {
-              if (current.some((item) => item.id === incoming.id)) {
-                return current;
-              }
-
-              return [...current, incoming];
-            });
-          })
           .on("presence", { event: "sync" }, () => {
             const state = newChannel.presenceState();
             const users = new Set<string>();
@@ -208,8 +194,6 @@ export function useRealtimeChat({
           supabase.removeChannel(newChannel);
           return;
         }
-
-        setChannel(newChannel);
       } catch {
         setIsConnected(false);
         setConnectedUsers([]);
@@ -232,7 +216,7 @@ export function useRealtimeChat({
 
   const sendMessage = useCallback(
     async (content: string, file?: File | null) => {
-      if (!channel || !isConnected || !roomId) return;
+      if (!isConnected || !roomId) return;
       setChatError(null);
 
       const trimmed = content.trim();
@@ -303,16 +287,9 @@ export function useRealtimeChat({
 
           return [...current, nextMessage];
         });
-
-        // Push immediately to connected clients in the same room.
-        await channel.send({
-          type: "broadcast",
-          event: MESSAGE_EVENT,
-          payload: nextMessage,
-        });
       }
     },
-    [channel, isConnected, roomId, roomName, supabase, userId, username],
+    [isConnected, roomId, roomName, supabase, userId, username],
   );
 
   return {

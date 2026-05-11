@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ChatMessageItem } from "@/components/chat-message";
 import { useChatScroll } from "@/hooks/use-chat-scroll";
-import { useRealtimeChat, type ChatMessage } from "@/hooks/use-realtime-chat";
+import { useRealtimeChat } from "@/hooks/use-realtime-chat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -15,30 +15,18 @@ interface RealtimeChatProps {
   roomLabel?: string;
   username: string;
   userId: string;
-  onMessage?: (messages: ChatMessage[]) => void;
-  messages?: ChatMessage[];
 }
 
-/**
- * Realtime chat component
- * @param roomName - The name of the room to join. Each room is a unique chat.
- * @param username - The username of the user
- * @param onMessage - The callback function to handle the messages. Useful if you want to store the messages in a database.
- * @param messages - The messages to display in the chat. Useful if you want to display messages from a database.
- * @returns The chat component
- */
 export const RealtimeChat = ({
   roomName,
   roomLabel,
   username,
   userId,
-  onMessage,
-  messages: initialMessages = [],
 }: RealtimeChatProps) => {
   const { containerRef, scrollToBottom } = useChatScroll();
 
   const {
-    messages: realtimeMessages,
+    messages,
     sendMessage,
     isConnected,
     connectedUsers,
@@ -63,32 +51,15 @@ export const RealtimeChat = ({
     };
   }, [previewUrl]);
 
-  // Merge realtime messages with initial messages
-  const allMessages = useMemo(() => {
-    const mergedMessages = [...initialMessages, ...realtimeMessages];
-    // Remove duplicates based on message id
-    const uniqueMessages = mergedMessages.filter(
-      (message, index, self) =>
-        index === self.findIndex((m) => m.id === message.id),
-    );
-    // Sort by creation date
-    const sortedMessages = uniqueMessages.sort((a, b) =>
-      a.createdAt.localeCompare(b.createdAt),
-    );
-
-    return sortedMessages;
-  }, [initialMessages, realtimeMessages]);
+  const sortedMessages = useMemo(
+    () =>
+      [...messages].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    [messages],
+  );
 
   useEffect(() => {
-    if (onMessage) {
-      onMessage(allMessages);
-    }
-  }, [allMessages, onMessage]);
-
-  useEffect(() => {
-    // Scroll to bottom whenever messages change
     scrollToBottom();
-  }, [allMessages, scrollToBottom]);
+  }, [sortedMessages, scrollToBottom]);
 
   const handleSendMessage = useCallback(
     (e: React.FormEvent) => {
@@ -137,7 +108,6 @@ export const RealtimeChat = ({
         </p>
       </div>
 
-      {/* Messages */}
       <div
         ref={containerRef}
         className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-slate-50/90 p-4"
@@ -149,15 +119,15 @@ export const RealtimeChat = ({
           </div>
         ) : null}
 
-        {isConnected && allMessages.length === 0 ? (
+        {isConnected && sortedMessages.length === 0 ? (
           <div className="rounded-lg border border-slate-200 bg-white/80 px-4 py-3 text-center text-sm text-slate-600">
             Aun no hay mensajes. Escribe el primero para iniciar la
             conversacion.
           </div>
         ) : null}
         <div className="space-y-1">
-          {allMessages.map((message, index) => {
-            const prevMessage = index > 0 ? allMessages[index - 1] : null;
+          {sortedMessages.map((message, index) => {
+            const prevMessage = index > 0 ? sortedMessages[index - 1] : null;
             const showHeader =
               !prevMessage || prevMessage.user.name !== message.user.name;
 

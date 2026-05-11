@@ -30,7 +30,7 @@ export function SignUpForm({
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.SubmitEvent) => {
     e.preventDefault();
     const supabase = createClient();
     setIsLoading(true);
@@ -90,7 +90,6 @@ export function SignUpForm({
         throw error;
       }
 
-      // Supabase can return an obfuscated user with no identities when the email already exists.
       const identities = data.user?.identities ?? [];
       if (data.user && identities.length === 0) {
         setError("Este correo ya esta registrado. Inicia sesion.");
